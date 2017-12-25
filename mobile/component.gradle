@@ -1,0 +1,613 @@
+apply plugin: 'com.android.application'
+import  groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
+import javax.net.ssl.HostnameVerifier
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSession
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
+import java.security.SecureRandom
+import java.security.cert.CertificateException
+import java.security.cert.X509Certificate
+
+android {
+    println("begin android")
+
+    project.afterEvaluate{
+        println("begin evaluate")
+        tasks.matching {
+            it.name.startsWith("compile") && (it.name.endsWith('DebugJavaWithJavac') || it.name.endsWith
+                    ('ReleaseJavaWithJavac'))
+        }.each {
+            it.doFirst {
+                def arr = "[{\"key\":\"value1\"},{\"key\":\"value2\"}]"
+                def arrJson = new JsonSlurper().parseText(arr)
+                println "arrJson:"+arrJson.toString()
+                println "found!!!"
+                mergeComponentsJson()
+                println "suc"
+            }
+        }
+//        tasks.getByName("compileDebugJavaWithJavac") {
+//            it.doFirst{
+//
+//            }
+//        }
+    }
+}
+
+task createJson {
+//    mergeComponentsJson()
+    def configDirFile = new File(getComponentsDirPath())
+    if (configDirFile.exists()) {
+        def delResult = configDirFile.deleteDir()
+        println "deleteConfigFile " + delResult
+    }
+    println("task begin")
+    def json = new JsonBuilder();
+    json {
+        capital "ivan"
+        majorCities "ivanHome", "ivanTown"
+    }
+
+    File componentConfigFile = new File(getCmpClassFilePath());
+    System.out.print("componentDeletePath = " + componentConfigFile.getAbsolutePath());
+    componentConfigFile.delete();
+
+    println(json.toString())
+    def netConfig = loadComponentConfigFromNet()
+    if (null == netConfig) {
+
+    }
+
+    println("method start")
+    def methodResult = methodInvoke()
+    println(methodResult)
+    println("method end")
+    analyseJson("invalidJsonString")
+}
+
+def methodInvoke() {
+    println("methodInvoke")
+    "methodInvoke endStatement"
+}
+
+def analyseJson(jsonStr) {
+    def slurper = new JsonSlurper()
+    def json
+    try {
+        json = slurper.parseText(jsonStr)
+    } catch (Exception e) {
+        println(e.getMessage())
+        return
+    }
+    println(json.data.componentList)
+
+    StringBuilder sb = new StringBuilder()
+    if (null == json.data.componentList || json.data.componentList.size == 0) {
+    } else {
+        println(json.data.componentList.size)
+        sb.append("dependencies {\n")
+        for (int i = 0; i < json.data.componentList.size; i++) {
+            def componentJson = json.data.componentList.get(i)
+            println(componentJson)
+            sb.append("compile \'");
+            sb.append(componentJson.groupId)
+            sb.append(":")
+            sb.append(componentJson.artifactId)
+            sb.append(":")
+            sb.append(componentJson.version)
+            sb.append("\' {\n")
+            sb.append("exclude group: \"com.autonavi.amapauto\", module : \"common\"")
+            sb.append("\n}\n")
+        }
+        sb.append("}")
+    }
+    println(sb.toString())
+
+    writeToDependencies(sb.toString())
+
+//    String jsonArrString = "[{\"component\":\"agroup\"}]"
+
+//    getAllComponentsConfig(json.data.componentList)
+    def arrSlur = new JsonSlurper()
+//    def componentsStr = getAllComponentsConfig(arrSlur.parseText(jsonArrString))
+    def componentsStr = getAllComponentsConfig(jsonStr)
+    writeToCmpConfigFile(componentsStr)
+    createComponentFactory(componentsStr)
+}
+
+// 获取所需组件的类名配置信息
+def getAllComponentsConfig(jsonStr) {
+    // 返回类名配置jsonArray
+    println("getAllComponentsConfig\n"+jsonStr)
+    def slurper = new JsonSlurper()
+    def json
+    try {
+        json = slurper.parseText(jsonStr)
+    } catch (Exception e) {
+        println(e.getMessage())
+        return
+    }
+    String[] cmpIds = new String[json.data.componentList.size]
+    String[] cmpComponents = new String[json.data.componentList.size]
+    String[] cmpServices = new String[json.data.componentList.size]
+
+    for (int i = 0; i < json.data.componentList.size; i++) {
+        def componentJson = json.data.componentList.get(i)
+        println("componentId="+componentJson.artifactId)
+        if (null == componentJson.artifactId || "".equals(componentJson.artifactId)) {
+            continue
+        }
+        def cmpConfigJsonStr = loadComponentConfig(componentJson.artifactId)
+        println("cmpConfigjson="+cmpConfigJsonStr)
+        def cmpConfigJson = new JsonSlurper().parseText(cmpConfigJsonStr)
+        println("cmpConfig:\n")
+        cmpIds[i] = componentJson.artifactId
+        cmpComponents[i] = cmpConfigJson.component
+        cmpServices[i] = cmpConfigJson.componentService
+    }
+
+//    def arrayBuilder = new JsonBuilder()
+//    arrayBuilder {
+//        json.data.componentList.collect {
+//            [
+//                    cmpId : it.
+//            ]
+//        }
+//    }
+
+    def idJsonarr = new JsonBuilder()
+    idJsonarr {
+        list(
+                [cmpIds, cmpComponents, cmpServices].transpose().collect {
+                    [
+                            "key": it[0],
+                            "component": it[1],
+                            "componentService": it[2]
+                    ]
+                }
+        )
+    }
+    println("createJsonArray")
+    println(idJsonarr.toPrettyString())
+    println("\n")
+
+    return idJsonarr.toPrettyString()
+}
+
+// 根据组件id获取组件的类名配置信息
+def loadComponentConfig(componentId) {
+    // 返回该组件的jsonObject
+//    if (componentId.equals("track")) {
+//        def trackCmp = new JsonBuilder();
+//        trackCmp {
+//            componentIdentifier componentId
+//            component "trackComponent"
+//            componentService "trackServiceComponent"
+//        }
+//        println("trackCmp:" + trackCmp.toString())
+//        return trackCmp.toString()
+//    } else if (componentId.equals("widget")) {
+//        def trackCmp = new JsonBuilder();
+//        trackCmp {
+//            componentIdentifier componentId
+//            component "widgetComponent"
+//            componentService "widgetServiceComponent"
+//        }
+//        println("widgetCmp:" + trackCmp.toString())
+//        return trackCmp.toString()
+//    }
+    String urlFormater = "http://30.28.12.31:8080/job/componentService/lastSuccessfulBuild/artifact/componentService" +
+            "/%s.json"
+    String auth = "guocai.cgc:ac6751c069c345824062e973a7b65a97"
+    auth = new String(Base64.encoder.encode(auth.getBytes()))
+//    String auth = "user=guocai.cgc&password=ac6751c069c345824062e973a7b65a97"
+//    auth = URLEncoder.encode(auth)
+    String url = String.format(urlFormater, componentId)
+    println("encoded url:\n")
+    println(url)
+    def connection = new URL(url).openConnection();
+//    connection.setRequestProperty("username", "guannan.yan")
+//    connection.setRequestProperty("password", "dearyexinai.00")
+//    String userPassword = "guocai.cgc:951753endl";
+//    String encoding = new Base64().getEncoder().encode(userPassword.getBytes());
+    connection.setRequestProperty("Authorization", "Basic " + auth)
+    connection.setRequestMethod("GET")
+    connection.setRequestProperty("User-Agent",
+            "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0");
+    connection.doOutput = true
+
+    connection.connect()
+
+    println(connection.getResponseCode())
+
+    def netStr = connection.content.text
+    println("ivanNet\n")
+    println(netStr)
+    return netStr
+}
+
+// 将生成的组件类名配置信息json串写入工厂类中
+def writeToCmpConfigFile(configString) {
+    def filePath = getCmpClassFilePath()
+    println(filePath)
+    BufferedWriter bw = new BufferedWriter(new FileWriter(filePath, false))
+    println("writeToCmpConfigFile")
+    bw.write(configString)
+    bw.close()
+}
+
+def writeToDependencies(dependencies) {
+    def filePath = getCmpDependenciesFilePath()
+    println(filePath)
+    BufferedWriter bw = new BufferedWriter(new FileWriter(filePath, false))
+    bw.write(dependencies)
+    bw.close()
+}
+
+def getCmpDependenciesFilePath() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(rootProject.rootDir)
+            .append(File.separator).append("mobile").append(File.separator).append("cmp_dependencies.gradle")
+    return sb.toString()
+}
+
+def getCmpClassFilePath() {
+    return rootDir.getAbsolutePath() + File.separator + "components.json"
+}
+
+def loadComponentConfigFromNet() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(rootProject.rootDir).append(File.separator).append("cmp.properties")
+    String propertiesFilePath = sb.toString()
+    Properties p = new Properties();
+    p.load(new File(propertiesFilePath).newDataInputStream())
+    String baseLineId = p['baseLineId']
+    String channelId = p['channelId']
+    if (null == baseLineId || "".equals(baseLineId.trim())
+            || null == channelId || "".equals(channelId.trim())) {
+        return
+    }
+    System.out.println(String.format("baseLineId=%s\nchannelId=%s", baseLineId, channelId))
+//    String urlFormater = "http://11.239.170.201/android/components/get_choice_component/?version_uuid=%s&channelId=%s"
+    String urlFormater = "https://auto-nvwa.alibaba.net/android/components/get_choice_component/?appId=%s&channelId=%s"
+    String url = String.format(urlFormater, baseLineId, channelId)
+    def connection = new URL(url).openConnection();
+    connection.setRequestMethod("GET")
+    X509TrustManager trustManager = new X509TrustManager() {
+
+        @Override
+        void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+
+        }
+
+        @Override
+        void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+
+        }
+
+        @Override
+        X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0]
+        }
+    };
+    TrustManager[] trustAllCerts = new TrustManager[1];
+    trustAllCerts[0] = trustManager;
+    SSLContext sc = SSLContext.getInstance("TLS")
+    sc.init(null, trustAllCerts, new SecureRandom())
+    connection.setDefaultSSLSocketFactory(sc.getSocketFactory())
+
+
+    connection.setHostnameVerifier(new HostnameVerifier() {
+
+        @Override
+        boolean verify(String s, SSLSession sslSession) {
+            return true
+        }
+    })
+
+    connection.doOutput = true
+
+    connection.connect()
+
+    def netStr = connection.content.text
+    println("loadComponentConfigFromNet : " + netStr)
+
+    println(rootProject.rootDir)
+
+    analyseJson(netStr)
+}
+
+def helloInOther() {
+    println("hello in other")
+}
+
+
+def createComponentFactory(componentStr) {
+
+    println("createFactory")
+    def components = new JsonSlurper().parseText(componentStr)
+
+    BufferedWriter bw = null;
+    try {
+        File classFile = new File(getComponentFactoryFilePath(""));
+        if (!classFile.exists()) {
+            classFile.createNewFile();
+        }
+        bw = new BufferedWriter(new FileWriter(classFile, false));
+
+        StringBuilder classSb = new StringBuilder();
+        classSb.append("package ").append("com.autonavi.amapauto.component").append(";\n")
+                .append("import ").append(COMPONENT_SERVICE_BASE).append(";\n")
+                .append("import ").append(COMPONENT_SERVICE_INTERFACE).append(";\n")
+                .append("import ").append(COMPONENT_BASE).append(";\n")
+                .append("import ").append(COMPONENT_INTERFACE).append(";\n")
+                .append("\n")
+                .append("public final class ComponentFactory implements ").append(COMPONENT_FACTORY_BASE)
+                .append(" {\n\n");
+        // 添加方法
+        println("componentsize=" + components.size)
+        classSb.append(createAppLauncherComponent(componentStr))
+        classSb.append(createServiceComponent(componentStr))
+        classSb.append(getConfiguredComponents(componentStr));
+
+        classSb.append("\n}");
+
+        bw.write(classSb.toString());
+        bw.flush();
+    } catch (IOException e) {
+        e.printStackTrace();
+    } finally {
+        if (null != bw) {
+            try {
+                bw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+def createComponentFactoryTmp(componentStr) {
+
+    def componentArr = new JsonSlurper().parseText(componentStr)
+    println('jsonoutput: ' + componentArr.list.get(0).toString())
+
+    println("createComponentFactoryTmp")
+
+    BufferedWriter bw = null;
+    try {
+        File classFile = new File(getComponentFactoryFilePath("tmp"));
+        println classFile.getAbsolutePath()
+        if (!classFile.exists()) {
+            classFile.createNewFile();
+        }
+        bw = new BufferedWriter(new FileWriter(classFile, false));
+
+        StringBuilder classSb = new StringBuilder();
+        classSb.append("package ").append("com.autonavi.amapauto.component").append(";\n")
+                .append("import ").append(COMPONENT_SERVICE_BASE).append(";\n")
+                .append("import ").append(COMPONENT_SERVICE_INTERFACE).append(";\n")
+                .append("import ").append(COMPONENT_BASE).append(";\n")
+                .append("import ").append(COMPONENT_INTERFACE).append(";\n")
+                .append("\n")
+                .append("public final class ComponentFactorytmp implements ").append(COMPONENT_FACTORY_BASE)
+                .append(" {\n\n");
+        // 添加方法
+        println("componentsize=" + componentArr.list.size)
+        println("component:\n" + componentArr.list.toString())
+        def appLauncherStr = createAppLauncherComponent(componentStr)
+        println "appLauncherStr = " + appLauncherStr
+        classSb.append(appLauncherStr)
+        classSb.append(createServiceComponent(componentStr))
+        classSb.append(getConfiguredComponents(componentStr));
+
+        classSb.append("\n}");
+
+        bw.write(classSb.toString());
+        bw.flush();
+        println "afterWriteTmpClass"
+    } catch (IOException e) {
+        println "writeTmpClassFail: " + e.getMessage()
+        e.printStackTrace();
+    } finally {
+        if (null != bw) {
+            try {
+                bw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+def createAppLauncherComponent(componentStr) {
+    def componentArr = new JsonSlurper().parseText(componentStr)
+
+    println "createAppLauncherComponent().\n" + componentArr.toString()
+
+    StringBuilder method = new StringBuilder();
+    method.append("\n@Override\n")
+            .append("public ").append(COMPONENT_INTERFACE_CLASS)
+            .append(" createAppLauncherComponent(")
+            .append("String componentId")
+            .append(") {\n");
+    method.append("switch(componentId) {\n");
+    String componentId = null;
+    String componentClass = null;
+    try {
+        for (int i = 0; i < componentArr.list.size; i++) {
+            def object = componentArr.list.get(i);
+            componentId = object.componentIdentifier;
+            componentClass = object.component;
+            if (null == componentClass || "".equals(componentClass)) {
+                continue;
+            }
+            method.append("case \"").append(componentId).append("\" :\n");
+            method.append(String.format("    %s %s = new %s();\n", COMPONENT_BASE_CLASS, componentId, componentClass));
+            method.append("    return ").append(componentId).append(";\n");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    method.append("default:\n").append("    return null;\n")
+            .append("}\n")
+            .append("}\n");
+    return method.toString();
+}
+
+//ext.COMPONENT_SERVICE_BASE = "com.autonavi.framework.component.AbstractComponent"
+//project.ext {
+//}
+
+def createServiceComponent(componentStr) {
+    def componentArr = new JsonSlurper().parseText(componentStr)
+
+    StringBuilder method = new StringBuilder();
+    method.append("\n@Override\n")
+            .append("public ").append(COMPONENT_SERVICE_INTERFACE_CLASS)
+            .append(" createServiceComponent(")
+            .append("String componentId")
+            .append(") {\n");
+    method.append("switch(componentId) {\n");
+    String componentId = null;
+    String componentServiceClass = null;
+//    println("createService:")
+//    println(components.toPrettyString())
+    try {
+        for (int i = 0; i < componentArr.list.size; i++) {
+            def object = componentArr.list.get(i);
+            componentId = object.componentIdentifier
+            componentServiceClass = object.componentService
+            println("componentId=" + componentId+"\nservice=" + componentServiceClass)
+            if (null == componentServiceClass || "".equals(componentServiceClass)) {
+                continue;
+            }
+            method.append("case \"").append(componentId).append("\" :\n");
+            method.append(String.format("    %s %s = new %s();\n", COMPONENT_SERVICE_BASE_CLASS, componentId,
+                    componentServiceClass));
+            method.append("    return ").append(componentId).append(";\n");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    method.append("default:\n").append("    return null;\n")
+            .append("}\n")
+            .append("}\n");
+    return method.toString();
+}
+
+private String getConfiguredComponents(componentStr) {
+    def componentArr = new JsonSlurper().parseText(componentStr)
+
+    StringBuilder method = new StringBuilder();
+    method.append("\n@Override\n")
+            .append("public ").append("String[]")
+            .append(" getConfiguredComponents() {\n");
+    if (componentArr.list.size == 0) {
+        method.append("String[] components = null;");
+    }
+    method.append("String[] components = new String[").append(componentArr.list.size).append("];\n");
+    String componentId = null;
+    try {
+        for (int i = 0; i < componentArr.list.size; i++) {
+            def object = componentArr.list.get(i);
+            componentId = object.componentIdentifier;
+
+            method.append("components[").append(i).append("] = \"").append(componentId).append("\";\n");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
+    method.append("return components;\n");
+    method.append("}\n");
+    return method.toString();
+}
+
+def getComponentFactoryFilePath(index) {
+    try {
+        def rootProjectPath = projectDir.toString()
+        println "rootProjectPath\n" + rootProjectPath
+        StringBuilder classPath = new StringBuilder(rootProjectPath)
+        classPath.append(File.separator).append("src_component")
+                .append(File.separator).append("com")
+                .append(File.separator).append("example")
+                .append(File.separator).append("guocaicgc")
+                .append(File.separator).append("ivantest")
+                .append(File.separator).append("component")
+                .append(File.separator).append("factory");
+        File packageFile = new File(classPath.toString());
+        if (!packageFile.exists()) {
+            packageFile.mkdirs();
+        }
+        classPath.append(File.separator).append("ComponentFactory").append(index + ".java");
+        return classPath.toString();
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+    return null;
+}
+
+def mergeComponentsJson() {
+    println("begin mergeComponentsJson()")
+    def componentsDirPath = getComponentsDirPath()
+    def dirFile = new File(componentsDirPath)
+    if (!dirFile.exists()) {
+        return
+    }
+    def cmpJsonFiles = dirFile.listFiles()
+    if (null == cmpJsonFiles || cmpJsonFiles.size() == 0) {
+        return
+    }
+    def cmpIds = new String[cmpJsonFiles.size()]
+    def componentClassArr = new String[cmpJsonFiles.size()]
+    def jsonSlurper = new JsonSlurper()
+    for (int i = 0; i < cmpJsonFiles.size(); i++) {
+        def cmpJsonFile = cmpJsonFiles[i]
+        def cmpClasses = getCmpClasses(cmpJsonFile.getAbsolutePath())
+        def cmpJsonObj = jsonSlurper.parseText(cmpClasses)
+        cmpIds[i] = cmpJsonObj.componentIdentifier
+        componentClassArr[i] = cmpJsonObj.component
+    }
+
+    def cmpArr = new JsonBuilder()
+    cmpArr {
+        list(
+                [cmpIds, componentClassArr].transpose().collect {
+                    [
+                            "componentIdentifier": it[0],
+                            "component": it[1]
+                    ]
+                }
+        )
+    }
+    println("mergeComponentsJson()\n" + cmpArr.toPrettyString())
+
+    createComponentFactoryTmp(cmpArr.toString())
+}
+
+def getComponentsDirPath() {
+    String rootProjectPath = new File(".").getCanonicalPath();
+    return rootProjectPath + File.separator + "componentTmp"
+}
+
+def getCmpClasses(filePath) {
+    def cmpFile = new File(filePath)
+    def reader = null;
+    def sb = null;
+    try {
+        reader = new BufferedReader(new FileReader(cmpFile))
+        sb = new StringBuilder()
+        String tmpStr = null;
+        while (null != (tmpStr = reader.readLine())) {
+            sb.append(tmpStr)
+        }
+        return sb.toString()
+    } catch (Exception e) {
+        println("getCmpClasses(). exp: " + e.getMessage())
+    }
+}

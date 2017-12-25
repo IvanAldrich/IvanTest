@@ -1,0 +1,14 @@
+apply plugin: 'maven'
+
+uploadArchives {
+    repositories.mavenDeployer {
+        name = 'mavenCentralReleaseDeployer'
+        repository(url: "file:///Users/guocai.cgc/Documents/Android/repo/") {
+            authentication(userName: "admin", password: "admin123")
+        }
+        pom.packaging = 'aar'
+        pom.groupId = "com.ivan.repositories"
+        pom.artifactId = "core"
+        pom.version = "1.0.0"
+    }
+}

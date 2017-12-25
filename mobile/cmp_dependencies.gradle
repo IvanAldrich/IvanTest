@@ -1,0 +1,5 @@
+dependencies {
+compile 'com.autonavi.amapauto:agroup:1.1.4' {
+exclude group: "com.autonavi.amapauto", module : "common"
+}
+}

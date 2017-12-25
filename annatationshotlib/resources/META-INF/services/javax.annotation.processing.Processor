@@ -1,0 +1,3 @@
+com.ivan.example.annatation.processor.AnnoComponentUtilsProcessor
+com.ivan.example.annatation.processor.ComponentFactoryProcessor
+com.ivan.example.annatation.processor.AnnoEntryProcessor

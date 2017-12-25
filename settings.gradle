@@ -1,0 +1,7 @@
+include ':modulecomponent'
+include ':anno-processor-module'
+
+include ':annatationshotLib'
+include ':mobile'
+include ':annatationshot'
+include ':modulecore'

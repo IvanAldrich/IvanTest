@@ -1,0 +1,80 @@
+apply plugin: 'com.android.library'
+apply plugin: 'com.neenbedankt.android-apt'
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion "26.0.2"
+
+
+    sourceSets {
+        main {
+
+            assets.srcDirs = ['assets']
+        }
+    }
+
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    compile 'com.android.support:appcompat-v7:26.+'
+    testCompile 'junit:junit:4.12'
+
+
+    compile 'com.squareup:javapoet:1.7.0'
+    compile project(':annatationshot')
+    apt project (':annatationshotLib')
+
+
+//    compile (name : 'core-1.0.0', ext : 'aar') {
+//        exclude group: 'com.autonavi.amapauto', module: 'common'
+//    }
+}
+
+//clean << {
+//    File componentConfigFile = new File(rootDir.getAbsolutePath() + "\\components.json");
+//    System.out.print("componentDeletePath = " + componentConfigFile.getAbsolutePath());
+//    componentConfigFile.delete();
+//}
+
+task delCmps {
+
+    File componentConfigFile = new File(rootDir.getAbsolutePath() + "\\components.json");
+    System.out.print("componentDeletePath = " + componentConfigFile.getAbsolutePath());
+    componentConfigFile.delete();
+}
+
+afterEvaluate() {
+    tasks.matching {
+        it.name.equals("delCmps")
+    }.each {
+        println("matched!!!!")
+        println(project.getRootProject().findProject(":mobile"))
+//        delCmps.dependsOn(tasks.getByName("assembleDebug"))
+//        delCmps.dependsOn(project.getRootProject().tasks.getByName("assembleDebug"))
+    }
+    tasks.matching {
+        it.name.contains("apt")
+    }.each {
+        println("apt matched")
+    }
+}

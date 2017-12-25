@@ -1,0 +1,12 @@
+[
+  {
+    "groupId":"com.autonavi.amapauto",
+    "artifactId":"park",
+    "class":"com.example.guocaicgc.ivantest.component.ParkComponent"
+  },
+  {
+    "groupId":"com.autonavi.amapauto",
+    "artifactId":"agroup",
+    "class":"com.example.guocaicgc.ivantest.component.AGroupComponent"
+  }
+]

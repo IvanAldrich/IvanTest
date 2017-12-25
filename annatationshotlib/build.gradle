@@ -1,0 +1,32 @@
+apply plugin: 'java'
+
+dependencies {
+//    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.google.auto.service:auto-service:1.0-rc2'
+    compile 'com.squareup:javapoet:1.7.0'
+    compile project(':annatationshot')
+}
+
+sourceCompatibility = "1.7"
+targetCompatibility = "1.7"
+
+build {
+    doFirst() {
+        StringBuilder classPath = new StringBuilder(rootDir.getAbsolutePath());
+        classPath.append(File.separator).append("mobile")
+                .append(File.separator).append("src")
+                .append(File.separator).append("main")
+                .append(File.separator).append("java")
+                .append(File.separator).append("com")
+                .append(File.separator).append("example")
+                .append(File.separator).append("guocaicgc")
+                .append(File.separator).append("ivantest")
+                .append(File.separator).append("component")
+                .append(File.separator).append("factory")
+                .append(File.separator).append("IvanFactory.java");
+
+        File componentConfigFile = new File(classPath.toString());
+        System.out.print("componentFactoryPath = " + componentConfigFile.getAbsolutePath());
+        componentConfigFile.delete();
+    }
+}
