@@ -1,7 +1,9 @@
-include ':modulecomponent'
+//include ':modulecomponent'
+include':ipc'//,
+include ':amapauto_widget'
 include ':anno-processor-module'
 
 include ':annatationshotLib'
 include ':mobile'
 include ':annatationshot'
-include ':modulecore'
+//include ':modulecore'

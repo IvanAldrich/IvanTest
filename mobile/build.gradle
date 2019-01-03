@@ -1,6 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.neenbedankt.android-apt'
-apply from : 'component.gradle'
+//apply from : 'component.gradle'
 
 android {
     compileSdkVersion 25
@@ -16,6 +16,7 @@ android {
         sourceSets {
             main {
                 java.srcDirs = ['src/main/java', 'src_component']
+                assets.srcDirs = ['assets']
             }
 
         }
@@ -40,21 +41,23 @@ android {
 }
 
 dependencies {
-//    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(dir: 'libs', include: ['*.jar'])
 //    provided files('libs-anna/annatationshotLib.jar')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:25.1.0'
+    compile 'com.android.support:appcompat-v7:24.1.0'
     testCompile 'junit:junit:4.12'
 
 //    compile project(':modulecore')
-    compile project(':modulecomponent')
+//    compile project(':modulecomponent')
 //    compile 'com.ivan.repositories:core:1.0.0@aar'
 //    compile (name: 'core-1.0.0', ext: 'aar') {
 //        transitive = true
 //    }
     compile project(':anno-processor-module')
     apt project (':annatationshotLib')
+    compile project(':ipc')
+    compile project(':amapauto_widget')
 }
 
